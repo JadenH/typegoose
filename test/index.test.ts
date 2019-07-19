@@ -1,38 +1,42 @@
-import { expect } from 'chai';
+import { fail } from 'assert';
+import { expect, use } from 'chai';
+import * as cap from 'chai-as-promised';
 import * as mongoose from 'mongoose';
 
-import { model as User, User as UserType } from './models/user';
-import { model as Car, Car as CarType } from './models/car';
-import { model as Person } from './models/person';
-import { model as Rating } from './models/rating';
-import { PersonNested, AddressNested, PersonNestedModel } from './models/nested-object';
-import { InventoryModel as Inventory, BeverageModel as Beverage, ScooterModel as Scooter } from './models/inventory'
+import { Ref } from '../src/prop';
+import { getClassForDocument } from '../src/utils';
 import { Genders } from './enums/genders';
 import { Role } from './enums/role';
-import { initDatabase, closeDatabase } from './utils/mongoConnect';
-import { getClassForDocument } from '../utils';
-import { fail } from 'assert';
-import { Virtual, VirtualSub } from "./models/virtualprop";
-import { ObjectID } from "bson";
+import { Car as CarType, model as Car } from './models/car';
+import { BeverageModel as Beverage, InventoryModel as Inventory, ScooterModel as Scooter } from './models/inventory';
+import { AddressNested, PersonNested, PersonNestedModel } from './models/nested-object';
+import { model as Person } from './models/person';
+import { model as Rating } from './models/rating';
+import { model as Select, SelectStrings } from './models/select';
+import { model as StringValidators } from './models/stringValidators';
+import { model as User, User as UserType } from './models/user';
+import { Virtual, VirtualSub } from './models/virtualprop';
+import { connect, disconnect } from './utils/mongooseConnect';
+
+use(cap);
 
 describe('Typegoose', () => {
-  before(() => initDatabase());
-
-  after(() => closeDatabase());
+  before(() => connect());
+  after(() => disconnect());
 
   it('should create a User with connections', async () => {
     const car = await Car.create({
       model: 'Tesla',
       version: 'ModelS',
-      price: mongoose.Types.Decimal128.fromString('50123.25'),
+      price: mongoose.Types.Decimal128.fromString('50123.25')
     });
 
     const [trabant, zastava] = await Car.create([{
       model: 'Trabant',
-      price: mongoose.Types.Decimal128.fromString('28189.25'),
+      price: mongoose.Types.Decimal128.fromString('28189.25')
     }, {
       model: 'Zastava',
-      price: mongoose.Types.Decimal128.fromString('1234.25'),
+      price: mongoose.Types.Decimal128.fromString('1234.25')
     }]);
 
     const user = await User.create({
@@ -48,7 +52,7 @@ describe('Typegoose', () => {
         position: 'Lead',
         jobType: {
           salery: 5000,
-          field: "IT",
+          field: 'IT',
         },
       },
       car: car.id,
@@ -82,7 +86,7 @@ describe('Typegoose', () => {
       expect(foundUser.job).to.have.property('position', 'Lead');
       expect(foundUser.job).to.have.property('startedAt').to.be.instanceof(Date);
       expect(foundUser.job.jobType).to.not.have.property('_id');
-      expect(foundUser.job.titleInUppercase()).to.eq("Developer".toUpperCase());
+      expect(foundUser.job.titleInUppercase()).to.eq('Developer'.toUpperCase());
       expect(foundUser.job.jobType).to.have.property('salery', 5000);
       expect(foundUser.job.jobType).to.have.property('field', 'IT');
       expect(foundUser.job.jobType).to.have.property('salery').to.be.a('number');
@@ -126,9 +130,9 @@ describe('Typegoose', () => {
         gender: Genders.FEMALE,
       });
 
-      expect(createdUser).to.be.ok;
+      expect(createdUser).to.not.be.an('undefined');
       expect(createdUser).to.have.property('created');
-      expect(createdUser.created).to.be.true;
+      expect(createdUser.created).to.be.equals(true);
       expect(createdUser).to.have.property('doc');
       expect(createdUser.doc).to.have.property('firstName', 'Jane');
 
@@ -137,9 +141,9 @@ describe('Typegoose', () => {
         lastName: 'Doe',
       });
 
-      expect(foundUser).to.be.ok;
+      expect(foundUser).to.not.be.an('undefined');
       expect(foundUser).to.have.property('created');
-      expect(foundUser.created).to.be.false;
+      expect(foundUser.created).to.be.equals(false);
       expect(foundUser).to.have.property('doc');
       expect(foundUser.doc).to.have.property('firstName', 'Jane');
 
@@ -173,7 +177,7 @@ describe('Typegoose', () => {
     expect(savedUser.languages).to.include('Hungarian');
     expect(savedUser.previousJobs.length).to.be.above(0);
     savedUser.previousJobs.map((prevJob) => {
-      expect(prevJob.startedAt).to.be.ok;
+      expect(prevJob.startedAt).to.be.a('date');
     });
   });
 
@@ -181,37 +185,47 @@ describe('Typegoose', () => {
     const user = await User.findOne();
     const car = await Car.findOne();
 
-    await Rating.create({ user: user._id, car: car._id, stars: 4 });
+    await Rating.create({ user, car, stars: 4 });
 
     // should fail, because user and car should be unique
-    const created = await Rating.create({ user: user._id, car: car._id, stars: 5 })
+    const created = await Rating.create({ user, car, stars: 5 })
       .then(() => true).catch(() => false);
 
-    expect(created).to.be.false;
+    expect(created).to.be.equals(false);
   });
 
-  it("should add and populate the virtual properties", async () => {
+  it('should add and populate the virtual properties', async () => {
     const virtualModel = new Virtual().getModelForClass(Virtual);
     const virtualSubModel = new VirtualSub().getModelForClass(VirtualSub);
 
-    const virtual1 = await new virtualModel({ dummyVirtual: "dummyVirtual1" } as Virtual).save();
-    const virtualsub1 = await new virtualSubModel({ dummy: "virtualSub1", virtual: virtual1._id } as VirtualSub).save();
-    const virtualsub2 = await new virtualSubModel({ dummy: "virtualSub2", virtual: new ObjectID() } as VirtualSub).save();
-    const virtualsub3 = await new virtualSubModel({ dummy: "virtualSub3", virtual: virtual1._id } as VirtualSub).save();
+    const virtual1 = await new virtualModel({ dummyVirtual: 'dummyVirtual1' } as Virtual).save();
+    const virtualsub1 = await new virtualSubModel({
+      dummy: 'virtualSub1',
+      virtual: virtual1._id
+    } as Partial<VirtualSub>).save();
+    const virtualsub2 = await new virtualSubModel({
+      dummy: 'virtualSub2',
+      virtual: mongoose.Types.ObjectId() as Ref<any>
+    } as Partial<VirtualSub>).save();
+    const virtualsub3 = await new virtualSubModel({
+      dummy: 'virtualSub3',
+      virtual: virtual1._id
+    } as Partial<VirtualSub>).save();
 
-    const newfound = await virtualModel.findById(virtual1._id).populate("virtualSubs").exec();
+    const newfound = await virtualModel.findById(virtual1._id).populate('virtualSubs').exec();
 
-    expect(newfound.dummyVirtual).to.be.equal("dummyVirtual1");
-    expect(newfound.virtualSubs).to.not.be.an("undefined");
-    expect(newfound.virtualSubs[0].dummy).to.be.equal("virtualSub1");
+    expect(newfound.dummyVirtual).to.be.equal('dummyVirtual1');
+    expect(newfound.virtualSubs).to.not.be.an('undefined');
+    expect(newfound.virtualSubs[0].dummy).to.be.equal('virtualSub1');
     expect(newfound.virtualSubs[0]._id.toString()).to.be.equal(virtualsub1._id.toString());
-    expect(newfound.virtualSubs[1].dummy).to.be.equal("virtualSub3");
+    expect(newfound.virtualSubs[1].dummy).to.be.equal('virtualSub3');
     expect(newfound.virtualSubs[1]._id.toString()).to.be.equal(virtualsub3._id.toString());
     expect(newfound.virtualSubs).to.not.include(virtualsub2);
   });
 
   it('Should support dynamic references via refPath', async () => {
     const sprite = new Beverage({
+<<<<<<< HEAD:src/test/index.test.ts
         isDecaf: true,
         isSugarFree: false
     })
@@ -251,25 +265,121 @@ describe('Typegoose', () => {
     // wrong type to make typescript happy
     expect((items[1].kind as typeof Beverage).isDecaf).to.be.undefined
   })
+=======
+      isDecaf: true,
+      isSugarFree: false
+    });
+    await sprite.save();
+
+    await new Beverage({
+      isDecaf: false,
+      isSugarFree: true
+    }).save();
+
+    const vespa = new Scooter({
+      makeAndModel: 'Vespa'
+    });
+    await vespa.save();
+
+    await new Inventory({
+      refItemPathName: 'Beverage',
+      kind: sprite,
+      count: 10,
+      value: 1.99
+    }).save();
+
+    await new Inventory({
+      refItemPathName: 'Scooter',
+      kind: vespa,
+      count: 1,
+      value: 1099.98
+    }).save();
+
+    // I should now have two "inventory" items, with different embedded reference documents.
+    const items = await Inventory.find({}).populate('kind');
+    expect((items[0].kind as typeof Beverage).isDecaf).to.be.equals(true);
+
+    // wrong type to make typescript happy
+    expect((items[1].kind as typeof Beverage).isDecaf).to.be.an('undefined');
+  });
+  describe('string validators', () => {
+    it('should respect maxlength', (done) => {
+      expect(StringValidators.create({
+        maxLength: 'this is too long',
+      })).to.eventually.rejectedWith(mongoose.Error.ValidationError).and.notify(done);
+    });
+
+    it('should trim', async () => {
+      const trimmed = await StringValidators.create({
+        trimmed: 'trim my end    ',
+      });
+      expect(trimmed.trimmed).equals('trim my end');
+    });
+
+    it('should uppercase', async () => {
+      const uppercased = await StringValidators.create({
+        uppercased: 'make me uppercase',
+      });
+      expect(uppercased.uppercased).equals('MAKE ME UPPERCASE');
+    });
+
+    it('should lowercase', async () => {
+      const lowercased = await StringValidators.create({
+        lowercased: 'MAKE ME LOWERCASE',
+      });
+      expect(lowercased.lowercased).equals('make me lowercase');
+    });
+
+    it('should respect enum', (done) => {
+      expect(StringValidators.create({
+        enumed: 'i am not valid',
+      })).to.eventually.rejectedWith(mongoose.Error).and.notify(done);
+    });
+  });
+
+  describe('should only return properties with {select}', () => {
+    before(async () => {
+      const selecttest = new Select();
+      await selecttest.save();
+    });
+
+    it('should only return default selected properties', async () => {
+      // variable name long: foundSelectDefault
+      const fSDefault = (await Select.findOne({}).exec()).toObject();
+      expect(fSDefault).to.not.have.property('test1');
+      expect(fSDefault).to.have.property('test2', SelectStrings.test2);
+      expect(fSDefault).to.not.have.property('test3');
+    });
+
+    it('should only return specificly selected properties', async () => {
+      // variable name long: foundSelectExtra
+      const fSExtra = (await Select.findOne({}).select(['+test1', '+test3', '-test2']).exec()).toObject();
+      expect(fSExtra).to.have.property('test1', SelectStrings.test1);
+      expect(fSExtra).to.not.have.property('test2');
+      expect(fSExtra).to.have.property('test3', SelectStrings.test3);
+    });
+  });
+>>>>>>> upstream/master:test/index.test.ts
 });
 
 describe('getClassForDocument()', () => {
-  before(() => initDatabase());
+  before(() => connect());
+  after(() => disconnect());
 
   it('should return correct class type for document', async () => {
     const car = await Car.create({
       model: 'Tesla',
-      price: mongoose.Types.Decimal128.fromString('50123.25'),
+      price: mongoose.Types.Decimal128.fromString('50123.25')
     });
     const carReflectedType = getClassForDocument(car);
     expect(carReflectedType).to.equals(CarType);
 
     const user = await User.create({
-      _id: mongoose.Types.ObjectId(),
       firstName: 'John2',
       lastName: 'Doe2',
       gender: Genders.MALE,
       languages: ['english2', 'typescript2'],
+      uniqueId: 'not-needed'
     });
     const userReflectedType = getClassForDocument(user);
     expect(userReflectedType).to.equals(UserType);
@@ -280,15 +390,12 @@ describe('getClassForDocument()', () => {
   });
 
   it('should use inherited schema', async () => {
-    let user = await Person.create({
-      email: 'my@email.com',
-    });
+    let user = await Person.create({ email: 'my@email.com' });
 
     const car = await Car.create({
       model: 'Tesla',
-      price: mongoose.Types.Decimal128.fromString('50123.25'),
+      price: mongoose.Types.Decimal128.fromString('50123.25')
     });
-
     await user.addCar(car);
 
     user = await Person.findById(user.id).populate('cars');
@@ -299,7 +406,7 @@ describe('getClassForDocument()', () => {
 
     expect(user.cars.length).to.be.above(0);
     user.cars.map((currentCar: CarType) => {
-      expect(currentCar.model).to.be.ok;
+      expect(currentCar.model).to.be.an('string');
     });
 
     // verify methods
@@ -318,14 +425,19 @@ describe('getClassForDocument()', () => {
 
     const person = await PersonNestedModel.create(personInput);
 
-    expect(person).is.not.undefined;
+    expect(person).is.not.be.an('undefined');
     expect(person.name).equals('Person, Some');
-    expect(person.address).is.not.undefined;
+    expect(person.address).is.not.be.an('undefined');
     expect(person.address.street).equals('A Street 1');
-    expect(person.moreAddresses).is.not.undefined;
+    expect(person.moreAddresses).is.not.be.an('undefined');
     expect(person.moreAddresses.length).equals(2);
     expect(person.moreAddresses[0].street).equals('A Street 2');
     expect(person.moreAddresses[1].street).equals('A Street 3');
+  });
+
+  it('should properly set Decimal128, ObjectID types to field', () => {
+    expect((Car.schema as any).paths.price.instance).to.eq('Decimal128');
+    expect((Car.schema as any).paths.someId.instance).to.eq('ObjectID');
   });
 
   // faild validation will need to be checked
@@ -343,7 +455,7 @@ describe('getClassForDocument()', () => {
     }
     const car = await Car.create({
       model: 'Tesla',
-      price: mongoose.Types.Decimal128.fromString('123.45'),
+      price: mongoose.Types.Decimal128.fromString('123.45')
     });
     const foundCar = await Car.findById(car._id).exec();
     expect(foundCar.price).to.be.a.instanceof(mongoose.Types.Decimal128);

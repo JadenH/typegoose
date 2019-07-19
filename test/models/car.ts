@@ -1,8 +1,8 @@
 import * as mongoose from 'mongoose';
 
-import { Typegoose, prop, pre } from '../../typegoose';
+import { pre, prop, Typegoose } from '../../src/typegoose';
 
-@pre<Car>('save', function(next) {
+@pre<Car>('save', function (next) {
   if (this.model === 'Trabant') {
     this.isSedan = true;
   }
@@ -10,16 +10,19 @@ import { Typegoose, prop, pre } from '../../typegoose';
 })
 export class Car extends Typegoose {
   @prop({ required: true })
-  model: string;
+  public model: string;
 
   @prop({ lowercase: true })
-  version: string;
+  public version: string;
 
   @prop()
-  isSedan?: boolean;
+  public isSedan?: boolean;
 
   @prop({ required: true })
-  price: mongoose.Types.Decimal128;
+  public price: mongoose.Types.Decimal128;
+
+  @prop()
+  public someId: mongoose.Types.ObjectId;
 }
 
 export const model = new Car().getModelForClass(Car);

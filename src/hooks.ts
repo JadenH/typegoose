@@ -29,7 +29,6 @@ type DocumentPreParallelFn<T> = (this: TypegooseDoc<T>, next: HookNextFn, done: 
 type SimplePreSerialFn<T> = (next: HookNextFn, docs?: any[]) => void;
 type SimplePreParallelFn<T> = (next: HookNextFn, done: PreDoneFn) => void;
 
-type DocumentPostFn<T> = (this: TypegooseDoc<T>, doc: TypegooseDoc<T>, next?: HookNextFn) => void;
 type ModelPostFn<T> = (result: any, next?: HookNextFn) => void;
 
 type PostNumberResponse<T> = (result: number, next?: HookNextFn) => void;
@@ -38,7 +37,7 @@ type PostMultipleResponse<T> = (result: TypegooseDoc<T>[], next?: HookNextFn) =>
 
 type PostNumberWithError<T> = (error: Error, result: number, next: HookNextFn) => void;
 type PostSingleWithError<T> = (error: Error, result: TypegooseDoc<T>, next: HookNextFn) => void;
-type PostMultipleWithError<T> = (error: Error, result: TypegooseDoc<T>[], net: HookNextFn) => void;
+type PostMultipleWithError<T> = (error: Error, result: TypegooseDoc<T>[], next: HookNextFn) => void;
 
 type NumberMethod = 'count';
 type SingleMethod = 'findOne' | 'findOneAndRemove' | 'findOneAndUpdate' | DocumentMethod;

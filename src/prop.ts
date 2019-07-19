@@ -2,10 +2,9 @@
 
 import * as mongoose from 'mongoose';
 
-import { schema, virtuals, methods } from './data';
-import { isPrimitive, initAsObject, initAsArray, isString, isNumber, isObject } from './utils';
-import { InvalidPropError, NotNumberTypeError, NotStringTypeError, NoMetadataError } from './errors';
-import { ObjectID } from 'bson';
+import { methods, schema, virtuals } from './data';
+import { InvalidPropError, NoMetadataError, NotNumberTypeError, NotStringTypeError } from './errors';
+import { initAsArray, initAsObject, isNumber, isObject, isPrimitive, isString } from './utils';
 
 export type Func = (...args: any[]) => any;
 
@@ -21,14 +20,24 @@ export type Validator =
     };
 
 export interface BasePropOptions {
+  /** include this value?
+   * @default true
+   */
+  select?: boolean;
+  /** is this value required? */
   required?: RequiredType;
+  /** only values from an string array? */
   enum?: string[] | object;
+  /** does the value should have a default? */
   default?: any;
   validate?: Validator | Validator[];
+  /** should this value be unique? */
   unique?: boolean;
+  /** should this value get an index? */
   index?: boolean;
   sparse?: boolean;
   expires?: string | number;
+  /** should subdocuments get their own id? */
   _id?: boolean;
 }
 
@@ -43,9 +52,13 @@ export interface ValidateNumberOptions {
 }
 
 export interface ValidateStringOptions {
+  lowercase?: boolean;
+  uppercase?: boolean;
+  trim?: boolean;
+  match?: RegExp | [RegExp, string];
+  enum?: string[];
   minlength?: number | [number, string];
   maxlength?: number | [number, string];
-  match?: RegExp | [RegExp, string];
 }
 
 export interface TransformStringOptions {
@@ -68,7 +81,13 @@ export type PropOptionsWithStringValidate = PropOptions & TransformStringOptions
 export type PropOptionsWithValidate = PropOptionsWithNumberValidate | PropOptionsWithStringValidate | VirtualOptions;
 
 const isWithStringValidate = (options: PropOptionsWithStringValidate) =>
-  options.minlength || options.maxlength || options.match;
+  options.lowercase ||
+  options.uppercase ||
+  options.trim ||
+  options.match ||
+  options.enum ||
+  options.minlength ||
+  options.maxlength;
 
 const isWithStringTransform = (options: PropOptionsWithStringValidate) =>
   options.lowercase || options.uppercase || options.trim;
@@ -153,11 +172,11 @@ const baseProp = (rawOptions: any, Type: any, target: any, key: any, isArray = f
   }
 
   const itemsRefPath = rawOptions.itemsRefPath;
-  if (refPath && typeof refPath === 'string') {
+  if (itemsRefPath && typeof itemsRefPath === 'string') {
     schema[name][key][0] = {
       ...schema[name][key][0],
       type: mongoose.Schema.Types.ObjectId,
-      refPath,
+      itemsRefPath,
     };
     return;
   }
@@ -167,6 +186,14 @@ const baseProp = (rawOptions: any, Type: any, target: any, key: any, isArray = f
     if (!Array.isArray(enumOption)) {
       rawOptions.enum = Object.keys(enumOption).map(propKey => enumOption[propKey]);
     }
+  }
+
+  const selectOption = rawOptions.select;
+  if (typeof selectOption === 'boolean') {
+    schema[name][key] = {
+      ...schema[name][key],
+      select: selectOption,
+    };
   }
 
   // check for validation inconsistencies
@@ -219,10 +246,15 @@ const baseProp = (rawOptions: any, Type: any, target: any, key: any, isArray = f
   }
 
   if (isArray) {
-    schema[name][key][0] = {
+    schema[name][key] = {
       ...schema[name][key][0],
       ...options,
-      ...subSchema,
+      type: [
+        {
+          ...(typeof options._id !== 'undefined' ? { _id: options._id } : {}),
+          ...subSchema,
+        },
+      ],
     };
     return;
   }
@@ -266,4 +298,4 @@ export const arrayProp = (options: ArrayPropOptions) => (target: any, key: strin
   baseProp(options, Type, target, key, true);
 };
 
-export type Ref<T> = T | ObjectID;
+export type Ref<T> = T | mongoose.Schema.Types.ObjectId;
