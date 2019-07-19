@@ -3,12 +3,22 @@
 import * as mongoose from 'mongoose';
 import 'reflect-metadata';
 
-import { constructors, hooks, methods, models, plugins, schema, virtuals } from './data';
+import {
+  constructors,
+  hooks,
+  methods,
+  models,
+  plugins,
+  schema,
+  schemaOptions as classSchemaOptions,
+  virtuals,
+} from './data';
 
 export * from './method';
 export * from './prop';
 export * from './hooks';
 export * from './plugin';
+export * from './options';
 export * from '.';
 export { getClassForDocument } from './utils';
 
@@ -71,9 +81,9 @@ export class Typegoose {
 
   private buildSchema<T>(t: T, name: string, schemaOptions: any, sch?: mongoose.Schema) {
     const Schema = mongoose.Schema;
-
+    const opts = classSchemaOptions[name] ? { ...(schemaOptions || {}), ...classSchemaOptions[name] } : schemaOptions;
     if (!sch) {
-      sch = schemaOptions ? new Schema(schema[name], schemaOptions) : new Schema(schema[name]);
+      sch = opts ? new Schema(schema[name], opts) : new Schema(schema[name]);
     } else {
       sch.add(schema[name]);
     }

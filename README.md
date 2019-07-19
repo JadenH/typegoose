@@ -428,6 +428,75 @@ Mongoose allows the developer to add pre and post [hooks / middlewares](http://m
 
 Typegoose provides this functionality through TypeScript's class decorators.
 
+### options
+Not all mongoose (and thus Typegoose) schemas are models requiring the creation of mongodb collections.  You can use the `@options` decorator to apply mongoose schema options directly to a Typegoose class, like you would for any subdocument schema that does not become a model or collection in mongoose.
+This is useful for nested documents that contain references that you want mongoose to populate, and return the content appropriately using the configurations for `toJSON` and `toObject`
+```typescript
+@options({ 
+  toObject: {
+    virtuals: true
+  }
+})
+class ParkingSpot extends Typegoose {
+    @prop()
+    spot: number;
+
+    @prop({ ref: Car })
+    carModel: Ref<Car>;
+}
+
+class Garage extends Typegoose {
+    @arrayProp({ items: ParkingSpot })
+    spots: ParkingSpot[];
+}
+
+const garage = await Garage.create({
+    spots: [
+        { spot: 1, model: car1},
+        { spot: 2, model: car2}
+    ]
+})
+
+const lookup = await Garage.findById(garage._id).populate('spots.carModel');
+lookup.toJson() // options {toJSON: { virtuals: true }}
+/**
+{
+  "spots":  [
+    {
+      "spot": 1,
+      "carModel": {
+        "isFast": true,
+        "model": 'Mustang'
+      }
+    },
+    {
+      "spot": 2,
+      "carModel": {
+        "isFast": false,
+        "model": 'Model T'
+      }
+    }
+  ]
+}
+*/
+lookup.toObject() // options {toObject: { virtuals: false }}
+/**
+{
+  spots: [
+    {
+      spot: 1,
+      carModel: ObjectId(...)
+    },
+    {
+      spot: 2,
+      carModel: ObjectId(...)
+    }
+  ]
+}
+*/
+```
+
+
 ### pre
 
 We can simply attach a `@pre` decorator to the Typegoose class and define the hook function like you normally would in Mongoose.

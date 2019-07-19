@@ -1,5 +1,5 @@
 // Tests for discriminators and refPaths
-import { prop, Ref, Typegoose } from '../../typegoose';
+import { prop, Ref, Typegoose } from '../../src/typegoose';
 
 export  class Scooter extends Typegoose {
     @prop()

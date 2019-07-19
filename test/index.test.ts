@@ -7,6 +7,7 @@ import { Ref } from '../src/prop';
 import { getClassForDocument } from '../src/utils';
 import { Genders } from './enums/genders';
 import { Role } from './enums/role';
+import { model as AirplaneRow } from './models/airplanerow';
 import { Car as CarType, model as Car } from './models/car';
 import { BeverageModel as Beverage, InventoryModel as Inventory, ScooterModel as Scooter } from './models/inventory';
 import { AddressNested, PersonNested, PersonNestedModel } from './models/nested-object';
@@ -225,47 +226,6 @@ describe('Typegoose', () => {
 
   it('Should support dynamic references via refPath', async () => {
     const sprite = new Beverage({
-<<<<<<< HEAD:src/test/index.test.ts
-        isDecaf: true,
-        isSugarFree: false
-    })
-    await sprite.save()
-
-    const cokeZero = new Beverage({
-        isDecaf: false,
-        isSugarFree: true
-    })
-    await sprite.save()
-
-    const vespa = new Scooter({
-        makeAndModel: 'Vespa'
-    })
-    await vespa.save()
-
-    const in1 = new Inventory({
-        refItemPathName: 'Beverage',
-        kind: sprite,
-        count: 10,
-        value: 1.99
-    })
-    await in1.save()
-
-    const in2 = new Inventory({
-        refItemPathName: 'Scooter',
-        kind: vespa,
-        count: 1,
-        value: 1099.98
-    })
-    await in2.save()
-
-    // I should now have two "inventory" items, with different embedded reference documents.
-    const items = await Inventory.find({}).populate('kind')
-    expect((items[0].kind as typeof Beverage).isDecaf).to.be.true
-
-    // wrong type to make typescript happy
-    expect((items[1].kind as typeof Beverage).isDecaf).to.be.undefined
-  })
-=======
       isDecaf: true,
       isSugarFree: false
     });
@@ -359,7 +319,89 @@ describe('Typegoose', () => {
       expect(fSExtra).to.have.property('test3', SelectStrings.test3);
     });
   });
->>>>>>> upstream/master:test/index.test.ts
+
+  it('should support setting options for schemas that will *NOT* become models/collections', async () => {
+      const p1 = await User.create({
+        firstName: 'Able',
+        lastName: 'Addison',
+        gender: Genders.MALE,
+        languages: ['english'],
+        uniqueId: 'a-a-1',
+      });
+
+      const p2 = await User.create({
+        firstName: 'Betty',
+        lastName: 'Binnington',
+        gender: Genders.FEMALE,
+        languages: ['english'],
+        uniqueId: 'b-b-2',
+      });
+
+      const p3 = await User.create({
+        firstName: 'Cory',
+        lastName: 'Conner',
+        gender: Genders.FEMALE,
+        languages: ['english'],
+        uniqueId: 'c-c-3',
+      });
+
+      const p4 = await User.create({
+        firstName: 'Daniel',
+        lastName: 'Davis',
+        gender: Genders.MALE,
+        languages: ['english'],
+        uniqueId: 'd-d-4',
+      });
+
+      const row1 = await AirplaneRow.create({
+        rowNumber: 1,
+        seats: [
+          {
+            seat: 'a', passenger: p1
+          },
+          {
+            seat: 'b', passenger: p2
+          },
+        ],
+        virtualSeats: [
+          {
+            seat: 'a', passenger: p1
+          },
+          {
+            seat: 'b', passenger: p2
+          },
+        ]
+      });
+
+      const row2 = await AirplaneRow.create({
+        rowNumber: 2,
+        seats: [
+          {
+            seat: 'a', passenger: p3
+          },
+          {
+            seat: 'c', passenger: p4
+          },
+        ],
+        virtualSeats: [
+          {
+            seat: 'a', passenger: p3
+          },
+          {
+            seat: 'c', passenger: p4
+          },
+        ]
+      });
+
+      const res2 = await AirplaneRow.findById(row2._id).populate('seats.passenger')
+      const objectResult1 = res2.toObject()
+
+      // AirplaneSeat has @options with toObject: { virtuals: true }
+      expect(objectResult1.seats[0].passenger.firstName).to.eql('Cory')
+
+      // VirtualAirplaneSeat does NOT have { virtuals: true } options, so mongoose won't inline it when converting to json/object
+      expect(objectResult1.virtualSeats[0].passenger.equals(p3._id)).to.be.true
+  })
 });
 
 describe('getClassForDocument()', () => {
