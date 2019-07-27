@@ -18,8 +18,8 @@ declare type PostMultipleWithError<T> = (error: Error, result: TypegooseDoc<T>[]
 declare type SingleMethod = 'findOne' | 'findOneAndRemove' | 'findOneAndUpdate' | DocumentMethod;
 declare type MultipleMethod = 'find' | 'update';
 export declare const pre: {
-    <T>(method: DocumentMethod, fn: DocumentPreSerialFn<T>): ClassDecorator;
-    <T>(method: DocumentMethod, parallel: boolean, fn: DocumentPreParallelFn<T>): ClassDecorator;
+    <T>(method: "init" | "validate" | "save" | "remove", fn: DocumentPreSerialFn<T>): ClassDecorator;
+    <T>(method: "init" | "validate" | "save" | "remove", parallel: boolean, fn: DocumentPreParallelFn<T>): ClassDecorator;
     <T>(method: "count" | "find" | "findOne" | "findOneAndRemove" | "findOneAndUpdate" | "update" | "updateOne" | "updateMany" | "insertMany", fn: SimplePreSerialFn<T>): ClassDecorator;
     <T>(method: "count" | "find" | "findOne" | "findOneAndRemove" | "findOneAndUpdate" | "update" | "updateOne" | "updateMany" | "insertMany", parallel: boolean, fn: SimplePreParallelFn<T>): ClassDecorator;
 };

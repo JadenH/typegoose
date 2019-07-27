@@ -1,1 +1,2 @@
-export declare const options: (opts: any) => (constructor: any) => void;
+import * as mongoose from 'mongoose';
+export declare const options: (opts: mongoose.SchemaOptions) => (constructor: any) => void;
